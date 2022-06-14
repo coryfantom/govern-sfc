@@ -1544,6 +1544,10 @@ contract SFC is Initializable, Ownable, GovernanceToSFC, StakersConstants, Versi
         emit UpdatedMaxDelegationRatio(_maxDelegation);
     }
 
+    function viewMaxDelegation() public view returns (uint256) {
+        return maxDelegation;
+    }
+
     function setMinSelfStake(uint256 _minSelfStake) external {
         _onlyGovernance(msg.sender);
         _updateMinSelfStake(_minSelfStake);

@@ -96,10 +96,6 @@ contract Governance is Initializable, ReentrancyGuard, GovernanceSettings, Versi
         return (t.active, t.assignment, t.proposalID);
     }
 
-    function getActiveProposals() public view returns (uint256) {
-        return activeProposals;
-    }
-
     function vote(address delegatedTo, uint256 proposalID, uint256[] calldata choices) nonReentrant external {
         if (delegatedTo == address(0)) {
             delegatedTo = msg.sender;

@@ -9,7 +9,7 @@ import "../common/Initializable.sol";
 */
 
 interface Governance {
-    function getActiveProposals() external view returns (uint256);
+    function activeProposals() external view returns (uint256);
 }
 
 contract GovernanceToSFC is Ownable {
@@ -44,7 +44,7 @@ contract GovernanceToSFC is Ownable {
      * @dev Returns the number of active governance proposals.
      */
     function activeProposals() public view returns (uint256) {
-        uint256 _activeProposals = governance.getActiveProposals();
+        uint256 _activeProposals = governance.activeProposals();
         return _activeProposals;
     }
 
