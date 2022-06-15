@@ -310,7 +310,7 @@ contract SFC is Initializable, Ownable, GovernanceToSFC, StakersConstants, Versi
      * @dev Minimum amount of stake for a validator, i.e., 500000 FTM
      */
     function minSelfStake() public view returns (uint256) {
-        return minStakeAmnt * 1e18;
+        return minStakeAmnt * Decimal.unit();
     }
 
     function maxDelegatedRatio() public view returns (uint256) {
