@@ -421,7 +421,7 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 if (await this.verifier.exists(15) === false) {
                     await this.verifier.addTemplate(15, 'ExecLoggingProposal', emptyAddr, _exec, ratio('0.0'), ratio('0.0'), _scales, 0, 100000000, 0, 100000000);
                 }
-                const option = web3.utils.fromAscii('option');
+                const option = web3.utils.fromAscii('54');
                 const options = [];
                 for (let i = 0; i < optionsNum; i++) {
                     options.push(option);
@@ -439,7 +439,7 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 if (await this.verifier.exists(15) === false) {
                     await this.verifier.addTemplate(15, 'NetworkParameterProposal', emptyAddr, _exec, ratio('0.0'), ratio('0.0'), _scales, 0, 100000000, 0, 100000000);
                 }
-                const option = web3.utils.fromAscii('option');
+                const option = web3.utils.fromAscii('7');
                 const options = [];
                 for (let i = 0; i < optionsNum; i++) {
                     options.push(option);
@@ -457,7 +457,7 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 if (await this.verifier.exists(15) === false) {
                     await this.verifier.addTemplate(15, 'DynamicNetworkProposal', emptyAddr, _exec, ratio('0.0'), ratio('0.0'), _scales, 0, 100000000, 0, 100000000);
                 }
-                const option = web3.utils.fromAscii('option');
+                const option = web3.utils.fromAscii('31');
                 const options = [];
                 for (let i = 0; i < optionsNum; i++) {
                     options.push(option);
@@ -525,7 +525,7 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
 
             it('checking network parameter proposal execution via delegatecall', async () => {
                 const paramBefore = await this.sfc.viewMaxDelegation();
-                console.log("SFC maxDelegation: " + (paramBefore).toNumber());
+                console.log("SFC maxDelegation: " + (paramBefore).toString());
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
                 const optionsNum = 1; // use maximum number of options to test gas usage
                 const choices = [new BN(4)];
@@ -554,12 +554,12 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
 
                 const paramAfter = await this.sfc.viewMaxDelegation();
-                console.log("SFC maxDelegation: " + (paramAfter).toNumber());
+                console.log("SFC maxDelegation: " + (paramAfter).toString());
             });
 
             it('checking dynamic network parameter (setMaxDelegation()) proposal execution via delegatecall', async () => {
                 const paramBefore = await this.sfc.viewMaxDelegation();
-                console.log("SFC maxDelegation: " + (paramBefore).toNumber());
+                console.log("SFC maxDelegation: " + (paramBefore).toString());
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
                 const optionsNum = 1; // use maximum number of options to test gas usage
                 const choices = [new BN(4)];
@@ -589,12 +589,12 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
 
                 const paramAfter = await this.sfc.viewMaxDelegation();
-                console.log("SFC maxDelegation: " + (paramAfter).toNumber());
+                console.log("SFC maxDelegation: " + (paramAfter).toString());
             });
 
             it('checking dynamic network parameter (setMinSelfStake()) proposal execution via delegatecall', async () => {
                 const paramBefore = await this.sfc.viewMinSelfStake();
-                console.log("SFC minStakeAmnt: " + (paramBefore).toNumber());
+                console.log("SFC minStakeAmnt: " + (paramBefore).toString());
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
                 const optionsNum = 1; // use maximum number of options to test gas usage
                 const choices = [new BN(4)];
@@ -624,12 +624,12 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
 
                 const paramAfter = await this.sfc.viewMinSelfStake();
-                console.log("SFC minStakeAmnt: " + (paramAfter).toNumber());
+                console.log("SFC minStakeAmnt: " + (paramAfter).toString());
             });
 
             it('checking dynamic network parameter (setValidatorCommission()) proposal execution via delegatecall', async () => {
                 const paramBefore = await this.sfc.viewValidatorCommission();
-                console.log("SFC validatorCommissionFee: " + (paramBefore).toNumber());
+                console.log("SFC validatorCommissionFee: " + (paramBefore).toString());
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
                 const optionsNum = 1; // use maximum number of options to test gas usage
                 const choices = [new BN(4)];
@@ -659,12 +659,12 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
 
                 const paramAfter = await this.sfc.viewValidatorCommission();
-                console.log("SFC validatorCommissionFee: " + (paramAfter).toNumber());
+                console.log("SFC validatorCommissionFee: " + (paramAfter).toString());
             });
 
             it('checking dynamic network parameter (setContractCommission()) proposal execution via delegatecall', async () => {
                 const paramBefore = await this.sfc.viewContractCommission();
-                console.log("SFC contractCommissionFee: " + (paramBefore).toNumber());
+                console.log("SFC contractCommissionFee: " + (paramBefore).toString());
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
                 const optionsNum = 1; // use maximum number of options to test gas usage
                 const choices = [new BN(4)];
@@ -694,12 +694,12 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
 
                 const paramAfter = await this.sfc.viewContractCommission();
-                console.log("SFC contractCommissionFee: " + (paramAfter).toNumber());
+                console.log("SFC contractCommissionFee: " + (paramAfter).toString());
             });
 
             it('checking dynamic network parameter (setUnlockedRewardRatio()) proposal execution via delegatecall', async () => {
                 const paramBefore = await this.sfc.viewUnlockedRewardRatio();
-                console.log("SFC unlockedReward: " + (paramBefore).toNumber());
+                console.log("SFC unlockedReward: " + (paramBefore).toString());
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
                 const optionsNum = 1; // use maximum number of options to test gas usage
                 const choices = [new BN(4)];
@@ -729,12 +729,12 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
 
                 const paramAfter = await this.sfc.viewUnlockedRewardRatio();
-                console.log("SFC unlockedReward: " + (paramAfter).toNumber());
+                console.log("SFC unlockedReward: " + (paramAfter).toString());
             });
 
             it('checking dynamic network parameter (setMinLockupDuration()) proposal execution via delegatecall', async () => {
                 const paramBefore = await this.sfc.viewMinLockupDuration();
-                console.log("SFC minLockup: " + (paramBefore).toNumber());
+                console.log("SFC minLockup: " + (paramBefore).toString());
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
                 const optionsNum = 1; // use maximum number of options to test gas usage
                 const choices = [new BN(4)];
@@ -764,12 +764,12 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
 
                 const paramAfter = await this.sfc.viewMinLockupDuration();
-                console.log("SFC minLockup: " + (paramAfter).toNumber());
+                console.log("SFC minLockup: " + (paramAfter).toString());
             });
 
             it('checking dynamic network parameter (setMaxLockupDuration()) proposal execution via delegatecall', async () => {
                 const paramBefore = await this.sfc.viewMaxLockupDuration();
-                console.log("SFC maxLockup: " + (paramBefore).toNumber());
+                console.log("SFC maxLockup: " + (paramBefore).toString());
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
                 const optionsNum = 1; // use maximum number of options to test gas usage
                 const choices = [new BN(4)];
@@ -799,12 +799,12 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
 
                 const paramAfter = await this.sfc.viewMaxLockupDuration();
-                console.log("SFC maxLockup: " + (paramAfter).toNumber());
+                console.log("SFC maxLockup: " + (paramAfter).toString());
             });
 
             it('checking dynamic network parameter (setWithdrawalPeriodEpoch()) proposal execution via delegatecall', async () => {
                 const paramBefore = await this.sfc.viewWithdrawalPeriodEpoch();
-                console.log("SFC withdrawalPeriodEpochValue: " + (paramBefore).toNumber());
+                console.log("SFC withdrawalPeriodEpochValue: " + (paramBefore).toString());
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
                 const optionsNum = 1; // use maximum number of options to test gas usage
                 const choices = [new BN(4)];
@@ -834,12 +834,12 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
 
                 const paramAfter = await this.sfc.viewWithdrawalPeriodEpoch();
-                console.log("SFC withdrawalPeriodEpochValue: " + (paramAfter).toNumber());
+                console.log("SFC withdrawalPeriodEpochValue: " + (paramAfter).toString());
             });
 
             it('checking dynamic network parameter (setWithdrawalPeriodTime()) proposal execution via delegatecall', async () => {
                 const paramBefore = await this.sfc.viewWithdrawalPeriodTime();
-                console.log("SFC withdrawalPeriodTimeValue: " + (paramBefore).toNumber());
+                console.log("SFC withdrawalPeriodTimeValue: " + (paramBefore).toString());
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
                 const optionsNum = 1; // use maximum number of options to test gas usage
                 const choices = [new BN(4)];
@@ -869,7 +869,7 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
 
                 const paramAfter = await this.sfc.viewWithdrawalPeriodTime();
-                console.log("SFC withdrawalPeriodTimeValue: " + (paramAfter).toNumber());
+                console.log("SFC withdrawalPeriodTimeValue: " + (paramAfter).toString());
             });
 
         });
