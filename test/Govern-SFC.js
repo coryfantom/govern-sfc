@@ -29,6 +29,7 @@ const UnitTestGovernable = artifacts.require('UnitTestGovernable');
 const PlainTextProposal = artifacts.require('PlainTextProposal');
 const ExplicitProposal = artifacts.require('ExplicitProposal');
 const ExecLoggingProposal = artifacts.require('ExecLoggingProposal');
+const DynamicNetworkProposal = artifacts.require('DynamicNetworkProposal');
 const AlteredPlainTextProposal = artifacts.require('AlteredPlainTextProposal');
 const NetworkParameterProposal = artifacts.require('NetworkParameterProposal');
 const BytecodeMatcher = artifacts.require('BytecodeMatcher');
@@ -425,7 +426,7 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 for (let i = 0; i < optionsNum; i++) {
                     options.push(option);
                 }
-                const contract = await ExecLoggingProposal.new('network', 'network-descr', options, minVotes, minAgreement, startDelay, minEnd, maxEnd, this.sfc.address, emptyAddr);
+                const contract = await ExecLoggingProposal.new('logging', 'logging-descr', options, minVotes, minAgreement, startDelay, minEnd, maxEnd, this.sfc.address, emptyAddr);
                 await contract.setOpinionScales(_scales);
                 await contract.setExecutable(_exec);
         
@@ -444,6 +445,24 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                     options.push(option);
                 }
                 const contract = await NetworkParameterProposal.new('network', 'network-descr', options, minVotes, minAgreement, startDelay, minEnd, maxEnd, this.sfc.address, emptyAddr);
+                await contract.setOpinionScales(_scales);
+                await contract.setExecutable(_exec);
+        
+                await this.gov.createProposal(contract.address, {value: this.proposalFee});
+        
+                return {proposalID: await this.gov.lastProposalID(), proposal: contract};
+            };
+
+            const createDynamicProposal = async (_signature, _exec, optionsNum, minVotes, minAgreement, startDelay = 0, minEnd = 120, maxEnd = 1200, _scales = scales) => {
+                if (await this.verifier.exists(15) === false) {
+                    await this.verifier.addTemplate(15, 'DynamicNetworkProposal', emptyAddr, _exec, ratio('0.0'), ratio('0.0'), _scales, 0, 100000000, 0, 100000000);
+                }
+                const option = web3.utils.fromAscii('option');
+                const options = [];
+                for (let i = 0; i < optionsNum; i++) {
+                    options.push(option);
+                }
+                const contract = await DynamicNetworkProposal.new('network', 'network-descr', options, minVotes, minAgreement, startDelay, minEnd, maxEnd, this.sfc.address, emptyAddr, _signature);
                 await contract.setOpinionScales(_scales);
                 await contract.setExecutable(_exec);
         
@@ -505,8 +524,8 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
             });
 
             it('checking network parameter proposal execution via delegatecall', async () => {
-                const maxDelegation = await this.sfc.viewMaxDelegation();
-                console.log("SFC maxDelegation: " + (maxDelegation).toNumber());
+                const paramBefore = await this.sfc.viewMaxDelegation();
+                console.log("SFC maxDelegation: " + (paramBefore).toNumber());
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
                 const optionsNum = 1; // use maximum number of options to test gas usage
                 const choices = [new BN(4)];
@@ -534,8 +553,323 @@ contract('Govern-SFC', async ([firstValidator, secondValidator, thirdValidator, 
                 expect(await proposalContract.executedOption()).to.be.bignumber.equal(new BN(0));
                 expect((await this.sfc.activeProposals()).toString()).to.equals('0');
 
-                const maxDelegationAfter = await this.sfc.viewMaxDelegation();
-                console.log("SFC maxDelegation: " + (maxDelegationAfter).toNumber());
+                const paramAfter = await this.sfc.viewMaxDelegation();
+                console.log("SFC maxDelegation: " + (paramAfter).toNumber());
+            });
+
+            it('checking dynamic network parameter (setMaxDelegation()) proposal execution via delegatecall', async () => {
+                const paramBefore = await this.sfc.viewMaxDelegation();
+                console.log("SFC maxDelegation: " + (paramBefore).toNumber());
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+                const optionsNum = 1; // use maximum number of options to test gas usage
+                const choices = [new BN(4)];
+                const signature = 'setMaxDelegation(uint256)';
+                const proposalInfo = await createDynamicProposal(signature, DelegatecallType, optionsNum, ratio('0.5'), ratio('0.6'), 0, 120);
+                expect((await this.sfc.activeProposals()).toString()).to.equals('1');
+                const proposalID = proposalInfo.proposalID;
+                const proposalContract = proposalInfo.proposal;
+                // make new vote
+                await this.govable.stake(firstValidator, ether('10.0'));
+                await this.gov.vote(firstValidator, proposalID, choices);
+                // finalize voting by handling its task
+                evm.advanceTime(120); // wait until min voting end time
+                await this.gov.handleTasks(0, 1);
+
+                // check proposal status
+                const proposalStateInfo = await this.gov.proposalState(proposalID);
+                expect(proposalStateInfo.winnerOptionID).to.be.bignumber.equal(new BN(0));
+                expect(proposalStateInfo.votes).to.be.bignumber.equal(ether('10.0'));
+                expect(proposalStateInfo.status).to.be.bignumber.equal(new BN(1));
+
+                // check proposal execution via delegatecall
+                expect(await proposalContract.executedCounter()).to.be.bignumber.equal(new BN(1));
+                expect(await proposalContract.executedMsgSender()).to.equal(firstValidator);
+                expect(await proposalContract.executedAs()).to.equal(this.gov.address);
+                expect(await proposalContract.executedOption()).to.be.bignumber.equal(new BN(0));
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+
+                const paramAfter = await this.sfc.viewMaxDelegation();
+                console.log("SFC maxDelegation: " + (paramAfter).toNumber());
+            });
+
+            it('checking dynamic network parameter (setMinSelfStake()) proposal execution via delegatecall', async () => {
+                const paramBefore = await this.sfc.viewMinSelfStake();
+                console.log("SFC minStakeAmnt: " + (paramBefore).toNumber());
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+                const optionsNum = 1; // use maximum number of options to test gas usage
+                const choices = [new BN(4)];
+                const signature = 'setMinSelfStake(uint256)';
+                const proposalInfo = await createDynamicProposal(signature, DelegatecallType, optionsNum, ratio('0.5'), ratio('0.6'), 0, 120);
+                expect((await this.sfc.activeProposals()).toString()).to.equals('1');
+                const proposalID = proposalInfo.proposalID;
+                const proposalContract = proposalInfo.proposal;
+                // make new vote
+                await this.govable.stake(firstValidator, ether('10.0'));
+                await this.gov.vote(firstValidator, proposalID, choices);
+                // finalize voting by handling its task
+                evm.advanceTime(120); // wait until min voting end time
+                await this.gov.handleTasks(0, 1);
+
+                // check proposal status
+                const proposalStateInfo = await this.gov.proposalState(proposalID);
+                expect(proposalStateInfo.winnerOptionID).to.be.bignumber.equal(new BN(0));
+                expect(proposalStateInfo.votes).to.be.bignumber.equal(ether('10.0'));
+                expect(proposalStateInfo.status).to.be.bignumber.equal(new BN(1));
+
+                // check proposal execution via delegatecall
+                expect(await proposalContract.executedCounter()).to.be.bignumber.equal(new BN(1));
+                expect(await proposalContract.executedMsgSender()).to.equal(firstValidator);
+                expect(await proposalContract.executedAs()).to.equal(this.gov.address);
+                expect(await proposalContract.executedOption()).to.be.bignumber.equal(new BN(0));
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+
+                const paramAfter = await this.sfc.viewMinSelfStake();
+                console.log("SFC minStakeAmnt: " + (paramAfter).toNumber());
+            });
+
+            it('checking dynamic network parameter (setValidatorCommission()) proposal execution via delegatecall', async () => {
+                const paramBefore = await this.sfc.viewValidatorCommission();
+                console.log("SFC validatorCommissionFee: " + (paramBefore).toNumber());
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+                const optionsNum = 1; // use maximum number of options to test gas usage
+                const choices = [new BN(4)];
+                const signature = 'setValidatorCommission(uint256)';
+                const proposalInfo = await createDynamicProposal(signature, DelegatecallType, optionsNum, ratio('0.5'), ratio('0.6'), 0, 120);
+                expect((await this.sfc.activeProposals()).toString()).to.equals('1');
+                const proposalID = proposalInfo.proposalID;
+                const proposalContract = proposalInfo.proposal;
+                // make new vote
+                await this.govable.stake(firstValidator, ether('10.0'));
+                await this.gov.vote(firstValidator, proposalID, choices);
+                // finalize voting by handling its task
+                evm.advanceTime(120); // wait until min voting end time
+                await this.gov.handleTasks(0, 1);
+
+                // check proposal status
+                const proposalStateInfo = await this.gov.proposalState(proposalID);
+                expect(proposalStateInfo.winnerOptionID).to.be.bignumber.equal(new BN(0));
+                expect(proposalStateInfo.votes).to.be.bignumber.equal(ether('10.0'));
+                expect(proposalStateInfo.status).to.be.bignumber.equal(new BN(1));
+
+                // check proposal execution via delegatecall
+                expect(await proposalContract.executedCounter()).to.be.bignumber.equal(new BN(1));
+                expect(await proposalContract.executedMsgSender()).to.equal(firstValidator);
+                expect(await proposalContract.executedAs()).to.equal(this.gov.address);
+                expect(await proposalContract.executedOption()).to.be.bignumber.equal(new BN(0));
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+
+                const paramAfter = await this.sfc.viewValidatorCommission();
+                console.log("SFC validatorCommissionFee: " + (paramAfter).toNumber());
+            });
+
+            it('checking dynamic network parameter (setContractCommission()) proposal execution via delegatecall', async () => {
+                const paramBefore = await this.sfc.viewContractCommission();
+                console.log("SFC contractCommissionFee: " + (paramBefore).toNumber());
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+                const optionsNum = 1; // use maximum number of options to test gas usage
+                const choices = [new BN(4)];
+                const signature = 'setContractCommission(uint256)';
+                const proposalInfo = await createDynamicProposal(signature, DelegatecallType, optionsNum, ratio('0.5'), ratio('0.6'), 0, 120);
+                expect((await this.sfc.activeProposals()).toString()).to.equals('1');
+                const proposalID = proposalInfo.proposalID;
+                const proposalContract = proposalInfo.proposal;
+                // make new vote
+                await this.govable.stake(firstValidator, ether('10.0'));
+                await this.gov.vote(firstValidator, proposalID, choices);
+                // finalize voting by handling its task
+                evm.advanceTime(120); // wait until min voting end time
+                await this.gov.handleTasks(0, 1);
+
+                // check proposal status
+                const proposalStateInfo = await this.gov.proposalState(proposalID);
+                expect(proposalStateInfo.winnerOptionID).to.be.bignumber.equal(new BN(0));
+                expect(proposalStateInfo.votes).to.be.bignumber.equal(ether('10.0'));
+                expect(proposalStateInfo.status).to.be.bignumber.equal(new BN(1));
+
+                // check proposal execution via delegatecall
+                expect(await proposalContract.executedCounter()).to.be.bignumber.equal(new BN(1));
+                expect(await proposalContract.executedMsgSender()).to.equal(firstValidator);
+                expect(await proposalContract.executedAs()).to.equal(this.gov.address);
+                expect(await proposalContract.executedOption()).to.be.bignumber.equal(new BN(0));
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+
+                const paramAfter = await this.sfc.viewContractCommission();
+                console.log("SFC contractCommissionFee: " + (paramAfter).toNumber());
+            });
+
+            it('checking dynamic network parameter (setUnlockedRewardRatio()) proposal execution via delegatecall', async () => {
+                const paramBefore = await this.sfc.viewUnlockedRewardRatio();
+                console.log("SFC unlockedReward: " + (paramBefore).toNumber());
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+                const optionsNum = 1; // use maximum number of options to test gas usage
+                const choices = [new BN(4)];
+                const signature = 'setUnlockedRewardRatio(uint256)';
+                const proposalInfo = await createDynamicProposal(signature, DelegatecallType, optionsNum, ratio('0.5'), ratio('0.6'), 0, 120);
+                expect((await this.sfc.activeProposals()).toString()).to.equals('1');
+                const proposalID = proposalInfo.proposalID;
+                const proposalContract = proposalInfo.proposal;
+                // make new vote
+                await this.govable.stake(firstValidator, ether('10.0'));
+                await this.gov.vote(firstValidator, proposalID, choices);
+                // finalize voting by handling its task
+                evm.advanceTime(120); // wait until min voting end time
+                await this.gov.handleTasks(0, 1);
+
+                // check proposal status
+                const proposalStateInfo = await this.gov.proposalState(proposalID);
+                expect(proposalStateInfo.winnerOptionID).to.be.bignumber.equal(new BN(0));
+                expect(proposalStateInfo.votes).to.be.bignumber.equal(ether('10.0'));
+                expect(proposalStateInfo.status).to.be.bignumber.equal(new BN(1));
+
+                // check proposal execution via delegatecall
+                expect(await proposalContract.executedCounter()).to.be.bignumber.equal(new BN(1));
+                expect(await proposalContract.executedMsgSender()).to.equal(firstValidator);
+                expect(await proposalContract.executedAs()).to.equal(this.gov.address);
+                expect(await proposalContract.executedOption()).to.be.bignumber.equal(new BN(0));
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+
+                const paramAfter = await this.sfc.viewUnlockedRewardRatio();
+                console.log("SFC unlockedReward: " + (paramAfter).toNumber());
+            });
+
+            it('checking dynamic network parameter (setMinLockupDuration()) proposal execution via delegatecall', async () => {
+                const paramBefore = await this.sfc.viewMinLockupDuration();
+                console.log("SFC minLockup: " + (paramBefore).toNumber());
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+                const optionsNum = 1; // use maximum number of options to test gas usage
+                const choices = [new BN(4)];
+                const signature = 'setMinLockupDuration(uint256)';
+                const proposalInfo = await createDynamicProposal(signature, DelegatecallType, optionsNum, ratio('0.5'), ratio('0.6'), 0, 120);
+                expect((await this.sfc.activeProposals()).toString()).to.equals('1');
+                const proposalID = proposalInfo.proposalID;
+                const proposalContract = proposalInfo.proposal;
+                // make new vote
+                await this.govable.stake(firstValidator, ether('10.0'));
+                await this.gov.vote(firstValidator, proposalID, choices);
+                // finalize voting by handling its task
+                evm.advanceTime(120); // wait until min voting end time
+                await this.gov.handleTasks(0, 1);
+
+                // check proposal status
+                const proposalStateInfo = await this.gov.proposalState(proposalID);
+                expect(proposalStateInfo.winnerOptionID).to.be.bignumber.equal(new BN(0));
+                expect(proposalStateInfo.votes).to.be.bignumber.equal(ether('10.0'));
+                expect(proposalStateInfo.status).to.be.bignumber.equal(new BN(1));
+
+                // check proposal execution via delegatecall
+                expect(await proposalContract.executedCounter()).to.be.bignumber.equal(new BN(1));
+                expect(await proposalContract.executedMsgSender()).to.equal(firstValidator);
+                expect(await proposalContract.executedAs()).to.equal(this.gov.address);
+                expect(await proposalContract.executedOption()).to.be.bignumber.equal(new BN(0));
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+
+                const paramAfter = await this.sfc.viewMinLockupDuration();
+                console.log("SFC minLockup: " + (paramAfter).toNumber());
+            });
+
+            it('checking dynamic network parameter (setMaxLockupDuration()) proposal execution via delegatecall', async () => {
+                const paramBefore = await this.sfc.viewMaxLockupDuration();
+                console.log("SFC maxLockup: " + (paramBefore).toNumber());
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+                const optionsNum = 1; // use maximum number of options to test gas usage
+                const choices = [new BN(4)];
+                const signature = 'setMaxLockupDuration(uint256)';
+                const proposalInfo = await createDynamicProposal(signature, DelegatecallType, optionsNum, ratio('0.5'), ratio('0.6'), 0, 120);
+                expect((await this.sfc.activeProposals()).toString()).to.equals('1');
+                const proposalID = proposalInfo.proposalID;
+                const proposalContract = proposalInfo.proposal;
+                // make new vote
+                await this.govable.stake(firstValidator, ether('10.0'));
+                await this.gov.vote(firstValidator, proposalID, choices);
+                // finalize voting by handling its task
+                evm.advanceTime(120); // wait until min voting end time
+                await this.gov.handleTasks(0, 1);
+
+                // check proposal status
+                const proposalStateInfo = await this.gov.proposalState(proposalID);
+                expect(proposalStateInfo.winnerOptionID).to.be.bignumber.equal(new BN(0));
+                expect(proposalStateInfo.votes).to.be.bignumber.equal(ether('10.0'));
+                expect(proposalStateInfo.status).to.be.bignumber.equal(new BN(1));
+
+                // check proposal execution via delegatecall
+                expect(await proposalContract.executedCounter()).to.be.bignumber.equal(new BN(1));
+                expect(await proposalContract.executedMsgSender()).to.equal(firstValidator);
+                expect(await proposalContract.executedAs()).to.equal(this.gov.address);
+                expect(await proposalContract.executedOption()).to.be.bignumber.equal(new BN(0));
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+
+                const paramAfter = await this.sfc.viewMaxLockupDuration();
+                console.log("SFC maxLockup: " + (paramAfter).toNumber());
+            });
+
+            it('checking dynamic network parameter (setWithdrawalPeriodEpoch()) proposal execution via delegatecall', async () => {
+                const paramBefore = await this.sfc.viewWithdrawalPeriodEpoch();
+                console.log("SFC withdrawalPeriodEpochValue: " + (paramBefore).toNumber());
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+                const optionsNum = 1; // use maximum number of options to test gas usage
+                const choices = [new BN(4)];
+                const signature = 'setWithdrawalPeriodEpoch(uint256)';
+                const proposalInfo = await createDynamicProposal(signature, DelegatecallType, optionsNum, ratio('0.5'), ratio('0.6'), 0, 120);
+                expect((await this.sfc.activeProposals()).toString()).to.equals('1');
+                const proposalID = proposalInfo.proposalID;
+                const proposalContract = proposalInfo.proposal;
+                // make new vote
+                await this.govable.stake(firstValidator, ether('10.0'));
+                await this.gov.vote(firstValidator, proposalID, choices);
+                // finalize voting by handling its task
+                evm.advanceTime(120); // wait until min voting end time
+                await this.gov.handleTasks(0, 1);
+
+                // check proposal status
+                const proposalStateInfo = await this.gov.proposalState(proposalID);
+                expect(proposalStateInfo.winnerOptionID).to.be.bignumber.equal(new BN(0));
+                expect(proposalStateInfo.votes).to.be.bignumber.equal(ether('10.0'));
+                expect(proposalStateInfo.status).to.be.bignumber.equal(new BN(1));
+
+                // check proposal execution via delegatecall
+                expect(await proposalContract.executedCounter()).to.be.bignumber.equal(new BN(1));
+                expect(await proposalContract.executedMsgSender()).to.equal(firstValidator);
+                expect(await proposalContract.executedAs()).to.equal(this.gov.address);
+                expect(await proposalContract.executedOption()).to.be.bignumber.equal(new BN(0));
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+
+                const paramAfter = await this.sfc.viewWithdrawalPeriodEpoch();
+                console.log("SFC withdrawalPeriodEpochValue: " + (paramAfter).toNumber());
+            });
+
+            it('checking dynamic network parameter (setWithdrawalPeriodTime()) proposal execution via delegatecall', async () => {
+                const paramBefore = await this.sfc.viewWithdrawalPeriodTime();
+                console.log("SFC withdrawalPeriodTimeValue: " + (paramBefore).toNumber());
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+                const optionsNum = 1; // use maximum number of options to test gas usage
+                const choices = [new BN(4)];
+                const signature = 'setWithdrawalPeriodTime(uint256)';
+                const proposalInfo = await createDynamicProposal(signature, DelegatecallType, optionsNum, ratio('0.5'), ratio('0.6'), 0, 120);
+                expect((await this.sfc.activeProposals()).toString()).to.equals('1');
+                const proposalID = proposalInfo.proposalID;
+                const proposalContract = proposalInfo.proposal;
+                // make new vote
+                await this.govable.stake(firstValidator, ether('10.0'));
+                await this.gov.vote(firstValidator, proposalID, choices);
+                // finalize voting by handling its task
+                evm.advanceTime(120); // wait until min voting end time
+                await this.gov.handleTasks(0, 1);
+
+                // check proposal status
+                const proposalStateInfo = await this.gov.proposalState(proposalID);
+                expect(proposalStateInfo.winnerOptionID).to.be.bignumber.equal(new BN(0));
+                expect(proposalStateInfo.votes).to.be.bignumber.equal(ether('10.0'));
+                expect(proposalStateInfo.status).to.be.bignumber.equal(new BN(1));
+
+                // check proposal execution via delegatecall
+                expect(await proposalContract.executedCounter()).to.be.bignumber.equal(new BN(1));
+                expect(await proposalContract.executedMsgSender()).to.equal(firstValidator);
+                expect(await proposalContract.executedAs()).to.equal(this.gov.address);
+                expect(await proposalContract.executedOption()).to.be.bignumber.equal(new BN(0));
+                expect((await this.sfc.activeProposals()).toString()).to.equals('0');
+
+                const paramAfter = await this.sfc.viewWithdrawalPeriodTime();
+                console.log("SFC withdrawalPeriodTimeValue: " + (paramAfter).toNumber());
             });
 
         });

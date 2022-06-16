@@ -1558,6 +1558,10 @@ contract SFC is Initializable, Ownable, GovernanceToSFC, StakersConstants, Versi
         emit UpdatedMinSelfStake(_minSelfStake);
     }
 
+    function viewMinSelfStake() public view returns (uint256) {
+        return minStakeAmnt;
+    }
+
     function setValidatorCommission(uint256 _validatorCommission) external {
         _onlyGovernance(msg.sender);
         _updateValidatorCommission(_validatorCommission);
@@ -1566,6 +1570,10 @@ contract SFC is Initializable, Ownable, GovernanceToSFC, StakersConstants, Versi
     function _updateValidatorCommission(uint256 _validatorCommission) internal {
         validatorCommissionFee = _validatorCommission;
         emit UpdatedValidatorCommission(_validatorCommission);
+    }
+
+    function viewValidatorCommission() public view returns (uint256) {
+        return validatorCommissionFee;
     }
 
     function setContractCommission(uint256 _contractCommission) external {
@@ -1578,6 +1586,10 @@ contract SFC is Initializable, Ownable, GovernanceToSFC, StakersConstants, Versi
         emit UpdatedContractCommission(_contractCommission);
     }
 
+    function viewContractCommission() public view returns (uint256) {
+        return contractCommissionFee;
+    }
+
     function setUnlockedRewardRatio(uint256 _unlockedReward) external {
         _onlyGovernance(msg.sender);
         _updateUnlockedRewardRatio(_unlockedReward);
@@ -1586,6 +1598,10 @@ contract SFC is Initializable, Ownable, GovernanceToSFC, StakersConstants, Versi
     function _updateUnlockedRewardRatio(uint256 _unlockedReward) internal {
         unlockedReward = _unlockedReward;
         emit UpdatedUnlockedRewardRatio(_unlockedReward);
+    }
+
+    function viewUnlockedRewardRatio() public view returns (uint256) {
+        return unlockedReward;
     }
 
     function setMinLockupDuration(uint256 _minLockupDuration) external {
@@ -1598,6 +1614,10 @@ contract SFC is Initializable, Ownable, GovernanceToSFC, StakersConstants, Versi
         emit UpdatedMinLockupDuration(_minLockupDuration);
     }
 
+    function viewMinLockupDuration() public view returns (uint256) {
+        return minLockup;
+    }
+
     function setMaxLockupDuration(uint256 _maxLockupDuration) external {
         _onlyGovernance(msg.sender);
         _updateMaxLockupDuration(_maxLockupDuration);
@@ -1606,6 +1626,10 @@ contract SFC is Initializable, Ownable, GovernanceToSFC, StakersConstants, Versi
     function _updateMaxLockupDuration(uint256 _maxLockupDuration) internal {
         maxLockup = _maxLockupDuration;
         emit UpdatedMaxLockupDuration(_maxLockupDuration);
+    }
+
+    function viewMaxLockupDuration() public view returns (uint256) {
+        return maxLockup;
     }
 
     function setWithdrawalPeriodEpoch(uint256 _withdrawalPeriodEpochs) external {
@@ -1618,6 +1642,10 @@ contract SFC is Initializable, Ownable, GovernanceToSFC, StakersConstants, Versi
         emit UpdatedWithdrawalPeriodEpoch(_withdrawalPeriodEpochs);
     }
 
+    function viewWithdrawalPeriodEpoch() public view returns (uint256) {
+        return withdrawalPeriodEpochValue;
+    }
+
     function setWithdrawalPeriodTime(uint256 _withdrawalPeriodTime) external {
         _onlyGovernance(msg.sender);
         _updateWithdrawalPeriodTime(_withdrawalPeriodTime);
@@ -1626,5 +1654,9 @@ contract SFC is Initializable, Ownable, GovernanceToSFC, StakersConstants, Versi
     function _updateWithdrawalPeriodTime(uint256 _withdrawalPeriodTime) internal {
         withdrawalPeriodTimeValue = _withdrawalPeriodTime;
         emit UpdatedWithdrawalPeriodTime(_withdrawalPeriodTime);
+    }
+
+    function viewWithdrawalPeriodTime() public view returns (uint256) {
+        return withdrawalPeriodTimeValue;
     }
 }
