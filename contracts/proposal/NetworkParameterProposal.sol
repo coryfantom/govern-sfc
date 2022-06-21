@@ -12,10 +12,11 @@ interface SFC {
  */
 contract NetworkParameterProposal is DelegatecallExecutableProposal, Cancelable {
     address public sfc;
+    string public parameterFunction;
 
     constructor(string memory __name, string memory __description, bytes32[] memory __options, 
         uint256 __minVotes, uint256 __minAgreement, uint256 __start, uint256 __minEnd, uint256 __maxEnd,
-        address _sfc, address verifier) public {
+        address _sfc, address verifier, string memory _parameterFunction) public {
         _name = __name;
         _description = __description;
         _options = __options;
@@ -26,6 +27,7 @@ contract NetworkParameterProposal is DelegatecallExecutableProposal, Cancelable 
         _minEnd = __minEnd;
         _maxEnd = __maxEnd;
         sfc = _sfc;
+        parameterFunction = _parameterFunction;
         // verify the proposal right away to avoid deploying a wrong proposal
         if (verifier != address(0)) {
             require(verifyProposalParams(verifier), "failed verification");
@@ -36,7 +38,7 @@ contract NetworkParameterProposal is DelegatecallExecutableProposal, Cancelable 
 
     function execute_delegatecall(address selfAddr, uint256 newValue) external {
         NetworkParameterProposal self = NetworkParameterProposal(selfAddr);
-        SFC(self.sfc()).setMaxDelegation(100);
+        self.sfc().call(abi.encodeWithSignature(self.parameterFunction(), 19));
         emit NetworkParameterUpgradeIsDone(newValue);
     }
 }
